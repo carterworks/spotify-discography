@@ -223,7 +223,6 @@ def create_artist_playlist(artist_names: Tuple[str], log_level: str) -> None:
     user_id = sp.me()["id"]
 
     processed_artist_names = list(artist_names)
-    random.shuffle(processed_artist_names)
 
     if not processed_artist_names:
         # Use Rich console for initial messages
@@ -235,6 +234,8 @@ def create_artist_playlist(artist_names: Tuple[str], log_level: str) -> None:
         if not processed_artist_names:
             console.print("No discography playlists found to update. Exiting.")
             return
+
+    random.shuffle(processed_artist_names)
 
     # Print initial count here, before Progress context manager
     console = Console()  # Re-initialize or ensure it's available
