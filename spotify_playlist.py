@@ -152,13 +152,43 @@ def set_playlist_cover_image(
     logger.info(f"Set cover image for playlist ID: {playlist_id}")
 
 
+def get_all_user_discography_artists(sp: Spotify, user_id: str) -> List[str]:
+    """
+    Retrieves all artist names from the user's playlists that match the
+    "{artist_name} Discography" naming convention.
+    """
+    artist_names = []
+    playlists = sp.user_playlists(user_id)
+    while playlists:
+        for playlist in playlists["items"]:
+            if playlist["name"].endswith(" Discography"):
+                # Extract artist name from "Artist Name Discography"
+                artist_name = playlist["name"][:-len(" Discography")]
+                if artist_name: # Ensure we don't add empty names
+                    artist_names.append(artist_name)
+                    logger.info(f"Found discography playlist for: {artist_name}")
+        playlists = sp.next(playlists) if playlists["next"] else None
+    if not artist_names:
+        logger.info("No discography playlists found to update.")
+    return artist_names
+
+
 @click.command()
 @click.argument("artist_names", nargs=-1)  # Accept multiple artist names
 def create_artist_playlist(artist_names: Tuple[str]) -> None:
     sp = authenticate_spotify()
     user_id = sp.me()["id"]
 
-    for artist_name in artist_names:
+    processed_artist_names = list(artist_names)
+
+    if not processed_artist_names:
+        logger.info("No artist names provided. Attempting to update all existing discography playlists.")
+        processed_artist_names = get_all_user_discography_artists(sp, user_id)
+        if not processed_artist_names:
+            logger.info("No discography playlists found to update. Exiting.")
+            return
+
+    for artist_name in processed_artist_names:
         try:
             artist_id, artist_image = get_artist_info(sp, artist_name)
             if artist_id is None:
