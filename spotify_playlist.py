@@ -74,6 +74,7 @@ def get_artist_info(
 
 def get_all_songs(sp: Spotify, artist_id: str) -> List[Dict[str, Any]]:
     all_tracks = []
+    filtered_tracks = []
 
     albums = sp.artist_albums(artist_id, album_type="album,single,compilation")
     albums = albums["items"]
@@ -81,17 +82,23 @@ def get_all_songs(sp: Spotify, artist_id: str) -> List[Dict[str, Any]]:
     for album in albums:
         tracks = sp.album_tracks(album["id"])["items"]
         for track in tracks:
-            track_info = {
-                "name": track["name"],
-                "id": track["id"],
-                "release_date": album["release_date"],
-            }
-            all_tracks.append(track_info)
+            # Check if the target artist is one of the track's artists
+            track_artist_ids = [artist["id"] for artist in track["artists"]]
+            if artist_id in track_artist_ids:
+                track_info = {
+                    "name": track["name"],
+                    "id": track["id"],
+                    "release_date": album["release_date"],
+                }
+                filtered_tracks.append(track_info)
+            else:
+                logger.debug(f"Filtered out track '{track['name']}' - not by target artist")
+            all_tracks.append(track)
 
-    all_tracks.sort(key=lambda x: x["release_date"])
+    filtered_tracks.sort(key=lambda x: x["release_date"])
     logger.info(f"Collected {len(all_tracks)} tracks for artist ID: {artist_id}")
 
-    return all_tracks
+    return filtered_tracks
 
 
 def find_playlist(sp: Spotify, user_id: str, playlist_name: str) -> Optional[str]:
